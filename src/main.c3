@@ -116,7 +116,9 @@ fn void printPathItem(Path path, String pathname, int width)
 		// Print size and datetime
 		if (try size)
 		{
-			io::printf(" %-*d", 12, size);
+			String readableSize = getUsefulSize(size);
+			defer free(readableSize);
+			io::printf(" %-*s", 12, readableSize);
 			Time modifiedTime = file::last_modified(relativePath)!!;
 			DateTime dateTime = datetime::from_time(modifiedTime).to_local();
 			io::printf("%.*d %.*s %.*d:%.*d", 2, dateTime.day, 3, dateTime.month, 2, dateTime.hour, 2, dateTime.min);
@@ -143,7 +145,9 @@ fn void printPathItem(Path path, String pathname, int width)
 		// Print size
 		if (try size)
 		{
-			io::printf("%-*d", 12, size);
+			String readableSize = getUsefulSize((long)size);
+			defer free(readableSize);
+			io::printf("%-*s", 12, readableSize);
 			Time modifiedTime = dirModifiedAt((Path)relativePath);
 			DateTime dateTime = datetime::from_time(modifiedTime).to_local();
 			io::printf("%.*d %.*s %.*d:%.*d", 2, dateTime.day, 3, dateTime.month, 2, dateTime.hour, 2, dateTime.min);
@@ -232,9 +236,38 @@ fn Time dirModifiedAt(Path fullpath)
 				}
 			}
 		}
+	}
+	return md;
+}
 
-		// Here we can calculate the DateTime
+// Converts the given size to human readable format
+fn String getUsefulSize(long size)
+{
+	String type = "B";
+	float final_size;
+
+	if (size > 1024 * 1024 * 1024)
+	{
+		final_size = (float)size / (1024 * 1024 * 1024);
+		type = "GB";
 	}
 
-	return md;
+	else if (size > 1024 * 1024)
+	{
+		final_size = (float)size / (1024 * 1024);
+		type = "MB";
+	}
+
+	else if (size > 1024)
+	{
+		final_size = (float)size / 1024;
+		type = "KB";
+	}
+
+	else {
+		final_size = (float)size;
+	}
+
+	String fmtSize = string::format(mem, "%.1f%s", final_size, type);
+	return fmtSize;
 }
