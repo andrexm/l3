@@ -4,6 +4,7 @@ import libc;
 import std::io;
 import std::io::file;
 import std::io::path;
+import std::core::string;
 
 const int STDOUT_FILENO = 1;
 const ulong TIOCGWINSZ = 0x5413;
@@ -51,9 +52,27 @@ fn int main(String[] args)
 	if (try pathList)
 	{
 		printTableHeader(width);
+
+		// Print first folders
 		foreach (item: pathList)
 		{
-			printPathItem(item, pathname, width);
+			String fullpath = string::format(mem, "%s/%s", pathname, item);
+			defer free(fullpath);
+			if (path::is_dir((Path)fullpath))
+			{
+				printPathItem(item, pathname, width);
+			}
+		}
+
+		// Print files
+		foreach (item: pathList)
+		{
+			String fullpath = string::format(mem, "%s/%s", pathname, item);
+			defer free(fullpath);
+			if (path::is_file((Path)fullpath))
+			{
+				printPathItem(item, pathname, width);
+			}
 		}
 	}
 	return 0;
@@ -67,7 +86,7 @@ fn void printTableHeader(int win_width)
 	// Size column
 	io::printf("%-*s", 15, "Size");
 	// Name column
-	io::printf("%-*s", win_width - 20, "Name");
+	io::printf(" %-*s", win_width - 20, "Name");
 
 	// Reset foreground
 	io::printfn("\x1b[0m");
