@@ -125,7 +125,7 @@ fn void printPathItem(Path path, String pathname, int width)
 		}
 
 		// Print name
-		io::printfn(" -- %.*s", width - 20, path);
+		io::printfn(" -- %.*s", width - 32, path);
 		io::print("\x1b[0m"); // Reset foreground
 		return;
 	}
@@ -154,7 +154,7 @@ fn void printPathItem(Path path, String pathname, int width)
 		}
 
 		// Print name
-		io::printf(" -- %.*s", width - 20, path);
+		io::printf(" -- %.*s", width - 32, path);
 		io::printn("\x1b[0m"); // Reset foreground
 		return;
 	}
