@@ -5,6 +5,7 @@ import std::io;
 import std::io::file;
 import std::io::path;
 import std::core::string;
+import std::time::datetime;
 
 const int STDOUT_FILENO = 1;
 const ulong TIOCGWINSZ = 0x5413;
@@ -84,9 +85,11 @@ fn void printTableHeader(int win_width)
 	io::printf("   "); // 3 spaces
 
 	// Size column
-	io::printf("%-*s", 15, "Size");
+	io::printf("%-*s", 12, "Size");
+	// Modified column
+	io::printf("%-*s", 15, "Modified");
 	// Name column
-	io::printf(" %-*s", win_width - 20, "Name");
+	io::printf(" %-*s", win_width - 32, "Name");
 
 	// Reset foreground
 	io::printfn("\x1b[0m");
@@ -110,10 +113,13 @@ fn void printPathItem(Path path, String pathname, int width)
 		io::print("\x1b[92m"); // Yellow foreground
 		io::print(" 🗎");
 
-		// Print size
+		// Print size and datetime
 		if (try size)
 		{
 			io::printf(" %-*d", 12, size);
+			Time modifiedTime = file::last_modified(relativePath)!!;
+			DateTime dateTime = datetime::from_time(modifiedTime).to_local();
+			io::printf("%.*d %.*s %.*d:%.*d", 2, dateTime.day, 3, dateTime.month, 2, dateTime.hour, 2, dateTime.min);
 		}
 
 		// Print name
@@ -137,7 +143,10 @@ fn void printPathItem(Path path, String pathname, int width)
 		// Print size
 		if (try size)
 		{
-			io::printf("%-*d", 12, size);	
+			io::printf("%-*d", 12, size);
+			Time modifiedTime = dirModifiedAt((Path)relativePath);
+			DateTime dateTime = datetime::from_time(modifiedTime).to_local();
+			io::printf("%.*d %.*s %.*d:%.*d", 2, dateTime.day, 3, dateTime.month, 2, dateTime.hour, 2, dateTime.min);
 		}
 
 		// Print name
@@ -181,4 +190,51 @@ fn ulong? dirSize(Path fullpath)
 	}
 
 	return size;
+}
+
+fn Time dirModifiedAt(Path fullpath)
+{
+	Time md = time::now(); // Time for the lastest modified file in this folder
+	Duration diff = (Duration)md; // Used to identify the latest modified file in this folder
+	DateTime dt; // DateTime for the latest modified file in this folder
+	PathList? pathlist = path::ls(mem, fullpath);
+	defer (void)pathlist.free();
+
+	if (catch excuse = pathlist)
+	{
+		io::printfn("Error: %s", excuse);
+	}
+
+	if (try pathlist)
+	{
+		foreach(item: pathlist)
+		{
+			String newpath = string::format(mem, "%s/%s", fullpath, item);
+			defer free(newpath);
+
+			if (path::is_file((Path)newpath))
+			{
+				Time lastMod = file::last_modified(newpath)!!;
+				if (md - lastMod < diff)
+				{
+					diff = md - lastMod;
+					md = lastMod;
+				}
+			}
+
+			if (path::is_dir((Path)newpath))
+			{
+				Time lastMod = dirModifiedAt((Path)newpath);
+				if (md - lastMod < diff)
+				{
+					diff = md - lastMod;
+					md = lastMod;
+				}
+			}
+		}
+
+		// Here we can calculate the DateTime
+	}
+
+	return md;
 }
